@@ -170,7 +170,7 @@ After deploying the virtual machine, I verified its configuration through the Az
 
 For detailed instructions on creating a Windows virtual machine in Azure, refer to my previous project:
 
-**[Azure Virtual Machine Deployment Guide](PASTE_VM_DEPLOYMENT_GUIDE_URL_HERE)**
+**[Azure Virtual Machine Deployment Guide](https://github.com/Ashok-Bashyal/Azure-VM)**
 
 ### Screenshot: Azure Virtual Machine
 
