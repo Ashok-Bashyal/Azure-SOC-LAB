@@ -831,7 +831,6 @@ In addition to using KQL, I configured the Microsoft Sentinel Workbook visualiza
 
 This configuration specifies the query, geographic coordinates, failure counts, map visualization, and heatmap settings.
 
-**[View Workbook JSON Configuration](workbooks/attack-map-query-item.json)**
 
 The following JSON was used for the workbook query item:
 
