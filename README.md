@@ -48,6 +48,12 @@ These results demonstrate how cloud-based security monitoring tools can help sec
 
 The following illustrates how Windows Security Events are collected, forwarded, enriched, and visualized using Microsoft Sentinel.
 
+### Security Operations Center (SOC) Lab Architecture
+
+![Security Operations Center Lab Architecture](images/Architecture%20For%20the%20Lab.png)
+
+### Security Event Collection Workflow
+
 ```text
         Internet Authentication Attempts
                       |
@@ -1004,6 +1010,7 @@ Microsoft-Sentinel-Honeypot/
 ├── README.md
 │
 ├── images/
+│   ├── Architecture For the Lab.png
 │   ├── VM Creation.png
 │   ├── Inbound Security Rule.png
 │   ├── Inbound Security Rule Verification.png
