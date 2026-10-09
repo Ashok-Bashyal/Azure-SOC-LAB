@@ -177,8 +177,6 @@ For detailed instructions on creating a Windows virtual machine in Azure, refer 
 
 ![Azure Virtual Machine](images/VM%20Creation.png)
 
-[Back to Top](#table-of-contents)
-
 ---
 
 ## Step 2: Configure Inbound Security Rules
@@ -212,8 +210,6 @@ The intentionally permissive configuration increased the VM's exposure to unsoli
 ### Screenshot: Verifying the Inbound Security Rule
 
 ![Inbound Security Rule Verification](images/Inbound%20Security%20Rule%20Verification.png)
-
-[Back to Top](#table-of-contents)
 
 ---
 
@@ -254,8 +250,6 @@ Remote Desktop connections may display a certificate warning when the remote sys
 
 In production environments, certificate warnings should be investigated before establishing a connection.
 
-[Back to Top](#table-of-contents)
-
 ---
 
 ## Step 4: Configure Windows Firewall and Test Connectivity
@@ -295,8 +289,6 @@ However, successful ping responses do not necessarily verify that RDP or other a
 ### Screenshot: Ping Verification
 
 ![Ping VM IP Address](images/Ping%20VM%20IP%20Address.png)
-
-[Back to Top](#table-of-contents)
 
 ---
 
@@ -351,8 +343,6 @@ The illustrated event includes Logon Type 3, indicating a network logon attempt.
 
 These events confirmed that the operating system was recording unsuccessful authentication activity.
 
-[Back to Top](#table-of-contents)
-
 ---
 
 ## Step 6: Create Log Analytics Workspace
@@ -389,8 +379,6 @@ Instead of reviewing authentication logs exclusively through the VM's local Even
 
 This workspace served as the central repository for security logs collected from the honeypot VM.
 
-[Back to Top](#table-of-contents)
-
 ---
 
 ## Step 7: Integrate Microsoft Sentinel
@@ -418,8 +406,6 @@ For this project, I selected the previously created workspace:
 ![Link Log Analytics Workspace to Sentinel](images/Link%20Log%20Workspace%20to%20Sentinel.png)
 
 After completing the integration, I proceeded with configuring Windows Security Event collection.
-
-[Back to Top](#table-of-contents)
 
 ---
 
@@ -453,8 +439,6 @@ AMA stands for Azure Monitor Agent.
 The connector allows Windows Security Events to be collected through Azure Monitor Agent and a Data Collection Rule.
 
 The presence of the installed connector alone does not confirm successful log ingestion. Actual security events must be verified through Log Analytics.
-
-[Back to Top](#table-of-contents)
 
 ---
 
@@ -521,8 +505,6 @@ Finally, I reviewed the settings and created the Data Collection Rule.
 
 **Important:** Collecting all security events can increase Log Analytics ingestion costs. Production environments should consider requirements-based event collection.
 
-[Back to Top](#table-of-contents)
-
 ---
 
 ## Step 10: Verify Azure Monitor Agent
@@ -552,8 +534,6 @@ The extension status showed that provisioning succeeded.
 This confirmed that the monitoring agent was installed.
 
 I then verified the actual security logs through Log Analytics.
-
-[Back to Top](#table-of-contents)
 
 ---
 
@@ -629,8 +609,6 @@ SecurityEvent
 This query identifies successful authentication events.
 
 For investigating successful Remote Desktop logons, Logon Type 10 is particularly relevant.
-
-[Back to Top](#table-of-contents)
 
 ---
 
@@ -717,8 +695,6 @@ Microsoft Sentinel uses these records to match IP addresses found in Windows Sec
 
 > **Dataset Attribution:** Before publishing the original GeoIP dataset in a public repository, confirm that redistribution is permitted and acknowledge the original source where required.
 
-[Back to Top](#table-of-contents)
-
 ---
 
 ## Step 13: Create the Honeypot Attack Map
@@ -736,14 +712,16 @@ The workbook combines Windows Security Events with geographic information stored
 5. Click **Edit**.
 6. Remove unnecessary prepopulated components.
 7. Select **Add Data Source + Visualization**.
-8. Configure the query using Logs (Analytics).
-9. Enter the KQL query.
-10. Run the query.
-11. Select the Map visualization.
-12. Configure latitude, longitude, and failure count.
+8. Open the workbook query item's **Advanced Editor**.
+9. Enter the JSON workbook configuration.
+10. Apply the configuration and select the appropriate Log Analytics workspace.
+11. Run the query to verify that results are returned.
+12. Verify that the Map visualization displays geographic locations.
 13. Save the workbook.
 
 ### KQL Query: Geographic Attack Map
+
+The KQL statement embedded in the workbook JSON performs the geographic lookup and calculates failed authentication counts. The following is the readable version of that embedded query.
 
 ```kql
 let GeoIPDB_FULL = _GetWatchlist("geoip");
@@ -765,74 +743,17 @@ WindowsEvents
     friendly_location = strcat(cityname, " (", countryname, ")")
 ```
 
-### Query Explanation
-
-**1. Retrieve Geographic Reference Data**
-
-```kql
-let GeoIPDB_FULL = _GetWatchlist("geoip");
-```
-
-Retrieves the GeoIP watchlist previously imported into Microsoft Sentinel.
-
-**2. Retrieve Windows Security Events**
-
-```kql
-let WindowsEvents = SecurityEvent;
-```
-
-References the Windows Security Events stored in Log Analytics.
-
-**3. Filter Failed Logins**
-
-```kql
-| where EventID == 4625
-```
-
-Filters the data to show unsuccessful Windows authentication attempts.
-
-**4. Match IP Addresses With Geographic Data**
-
-```kql
-| evaluate ipv4_lookup(GeoIPDB_FULL, IpAddress, network)
-```
-
-Matches source IP addresses with network ranges in the imported GeoIP watchlist.
-
-**5. Count Authentication Failures**
-
-```kql
-| summarize FailureCount = count()
-    by IpAddress, latitude, longitude, cityname, countryname
-```
-
-Counts failed login events associated with each IP address and geographic location.
-
-**6. Prepare Geographic Visualization**
-
-```kql
-| project
-    FailureCount,
-    AttackerIp = IpAddress,
-    latitude,
-    longitude,
-    city = cityname,
-    country = countryname,
-    friendly_location = strcat(cityname, " (", countryname, ")")
-```
-
-Prepares the geographic coordinates and location labels required for map visualization.
-
 ---
 
 ### Workbook JSON Configuration
 
-In addition to using KQL, I configured the Microsoft Sentinel Workbook visualization using its JSON configuration.
+I configured the Microsoft Sentinel Workbook using the following JSON configuration.
 
-This configuration specifies the query, geographic coordinates, failure counts, map visualization, and heatmap settings.
+The configuration includes the KQL query, geographic coordinates, failed login counts, map visualization, and heatmap settings.
 
+**[View Workbook JSON Configuration](workbooks/attack-map-query-item.json)**
 
-The following JSON was used for the workbook query item:
+The JSON configuration used for the workbook query item was:
 
 ```json
 {
@@ -870,35 +791,107 @@ The following JSON was used for the workbook query item:
 }
 ```
 
-**Important:** This is a workbook query-item JSON configuration, not a standalone KQL query. The JSON belongs in the workbook query item's Advanced Editor, not the standard KQL query field. The workbook must also be associated with the correct Log Analytics workspace.
+**Important:** This JSON is a workbook query-item configuration, not a standalone KQL query. It belongs in the workbook query item's Advanced Editor, not in the standard KQL query field. The workbook must also be associated with the correct Log Analytics workspace.
 
-### Map Visualization Settings
+### Query Explanation
 
-| Setting | Configuration |
-|---|---|
-| Visualization Type | Map |
-| Location Information | Latitude / Longitude |
-| Latitude Column | latitude |
-| Longitude Column | longitude |
-| Label | friendly_location |
-| Size Metric | FailureCount |
-| Aggregation | Sum |
-| Color Metric | FailureCount |
-| Color Palette | Green to Red |
+The workbook JSON contains an embedded KQL query responsible for retrieving security events, matching source IP addresses with geographic information, and preparing the results for map visualization.
 
-The resulting map displays geographic markers representing locations associated with failed authentication events.
+#### 1. Retrieve Geographic Reference Data
 
-Locations with higher failure counts appear more prominent depending on the configured visualization settings.
+```kql
+let GeoIPDB_FULL = _GetWatchlist("geoip");
+```
+
+This command retrieves the GeoIP watchlist previously imported into Microsoft Sentinel.
+
+The watchlist contains IP network ranges and corresponding geographic information such as city, country, latitude, and longitude.
+
+#### 2. Retrieve Windows Security Events
+
+```kql
+let WindowsEvents = SecurityEvent;
+```
+
+This command references the Windows Security Events stored in the Log Analytics workspace.
+
+These events were collected from the honeypot VM through Azure Monitor Agent and the configured Data Collection Rule.
+
+#### 3. Filter Failed Login Attempts
+
+```kql
+| where EventID == 4625
+```
+
+This command filters the security events to include only unsuccessful Windows authentication attempts.
+
+Event ID 4625 is generated when a Windows account fails to log on.
+
+Filtering for this event allows the workbook to focus on failed authentication activity rather than unrelated security events.
+
+#### 4. Match IP Addresses With Geographic Data
+
+```kql
+| evaluate ipv4_lookup(GeoIPDB_FULL, IpAddress, network)
+```
+
+This command matches the source IP addresses recorded in Windows Security Events against the IP network ranges in the GeoIP watchlist.
+
+When a matching network range is found, the event can be associated with approximate geographic information.
+
+This enrichment provides the latitude, longitude, city, and country values needed for geographic visualization.
+
+#### 5. Count Authentication Failures
+
+```kql
+| summarize FailureCount = count()
+    by IpAddress, latitude, longitude, cityname, countryname
+```
+
+This command aggregates the matching events and counts the number of failed authentication attempts associated with each IP address and geographic location.
+
+The resulting `FailureCount` field is used to represent the volume of failed authentication activity.
+
+Higher failure counts can indicate repeated login attempts that may warrant further investigation.
+
+#### 6. Prepare Geographic Visualization
+
+```kql
+| project
+    FailureCount,
+    AttackerIp = IpAddress,
+    latitude,
+    longitude,
+    city = cityname,
+    country = countryname,
+    friendly_location = strcat(cityname, " (", countryname, ")")
+```
+
+This command selects and organizes the fields needed by the map visualization.
+
+It prepares the following information:
+
+- `FailureCount`: Number of failed authentication events.
+- `AttackerIp`: Source IP address recorded in the event.
+- `latitude`: Latitude associated with the matched IP range.
+- `longitude`: Longitude associated with the matched IP range.
+- `city`: City associated with the matched IP range.
+- `country`: Country associated with the matched IP range.
+- `friendly_location`: Readable city and country label.
+
+These fields allow Microsoft Sentinel Workbooks to display authentication activity on a geographic map.
+
+---
 
 ### Screenshot: Completed Microsoft Sentinel Honeypot Attack Map
 
 ![Microsoft Sentinel Honeypot Attack Map](images/Failed%20Login%20Attack%20Map.png)
 
-The attack map uses approximate IP geolocation information.
+The completed workbook displays geographic markers representing locations associated with failed authentication events.
 
-It does not identify an attacker's precise physical location.
+Locations with higher failure counts appear more prominent depending on the configured visualization settings.
 
-[Back to Top](#table-of-contents)
+The attack map uses approximate IP geolocation information and does not identify an attacker's precise physical location.
 
 ---
 
